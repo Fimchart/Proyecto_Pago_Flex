@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">Proyecto_Pago_Flex</string>
+
+    <!-- TopAppBar y Saludos -->
+    <string name="titulo">PagoFlex - Mi portal</string>
+    <string name="saludo_inicio">hola, %1$s</string>
+
+    <!-- Gamificación / Score -->
+    <string name="pagoflex_puntaje_titulo">Puntaje Pagador Puntual</string>
+    <string name="pagoflex_puntaje_pts">%1$d pts</string>
+
+    <!-- Compromisos de Pago -->
+    <string name="compromisos_seccion">Compromisos de Pago Vigentes</string>
+    <string name="pagoflex_vence_fecha">Vence el: %1$s</string>
+    <string name="btn_pagar">Pagar</string>
+    <string name="pago_exitoso">¡Pago realizado con éxito!</string>
+    <string name="btn_ok">OK</string>
+
+    <!-- Referidos -->
+    <string name="pagoflex_referidos_titulo">Programa de Referidos</string>
+    <string name="pagoflex_referidos_desc">Comparte tu código %1$s con otras instituciones</string>
+
+    <!-- Accesibilidad -->
+    <string name="cd_avatar">Foto de perfil del usuario</string>
+    <string name="cd_icono_pago">Icono de estado de pago</string>
+    <string name="cd_icono_puntaje">Icono de estrella de puntaje de pagador</string>
+    <string name="cd_icono_referidos">Icono de regalo de programa de referidos</string>
+    <string name="cd_btn_pagar">Boton para realizar el pago de %1$s por un monto de %2$s pesos</string>
+    <string name="cd_btn_ok">Boton OK</string>
+
+</resources>
