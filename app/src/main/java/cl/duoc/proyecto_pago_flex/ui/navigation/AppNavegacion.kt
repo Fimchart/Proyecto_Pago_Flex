@@ -35,9 +35,16 @@ fun AppNavegacion(
                 onMarcarPagado = { id -> pagoFlexViewModel.marcadoComoPagado(id) },
                 onNavegarNuevoPago = { navController.navigate(Pantalla.NuevoPago.ruta) },
                 onLimpiarMensaje = { pagoFlexViewModel.limpiarMensajeExito() },
+                onCambiarRol = { nuevoRol -> pagoFlexViewModel.cambiarRol(nuevoRol) },
                 onRecomendarOrganizacion = { nombreOrg ->
                     pagoFlexViewModel.registrarRecomendacion(nombreOrg)
-                }
+                },
+                onAbrirDialogoComprobantes = { pagoFlexViewModel.abrirDialogoComprobantes() },
+                onCerrarDialogoComprobantes = { pagoFlexViewModel.cerrarDialogoComprobantes() },
+                onAprobarComprobante = { id -> pagoFlexViewModel.aprobarComprobante(id) },
+                onRechazarComprobante = { id -> pagoFlexViewModel.rechazarComprobante(id) },
+                onEnviarRecordatoriosCobro = { pagoFlexViewModel.enviarRecordatoriosCobro() },
+                onExportarReporte = { pagoFlexViewModel.exportarReporte() }
             )
         }
 
@@ -46,9 +53,9 @@ fun AppNavegacion(
             NuevoPagoScreen(
                 onRegistrarPago = { empresa, monto, fecha ->
                     pagoFlexViewModel.registrarCompromiso(empresa, monto, fecha)
-                    navController.popBackStack() // Vuelve atrás al guardar
+                    navController.popBackStack()
                 },
-                onVolver = { navController.popBackStack() } // Vuelve atrás al cancelar
+                onVolver = { navController.popBackStack() }
             )
         }
     }

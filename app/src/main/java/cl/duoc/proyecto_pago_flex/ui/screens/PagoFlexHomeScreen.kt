@@ -17,13 +17,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -31,6 +34,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import cl.duoc.proyecto_pago_flex.model.CompromisoPago
 import cl.duoc.proyecto_pago_flex.model.EstadoPago
 import cl.duoc.proyecto_pago_flex.model.PagoFlexUiState
+import cl.duoc.proyecto_pago_flex.model.RolUsuario
 import cl.duoc.proyecto_pago_flex.ui.theme.Proyecto_Pago_FlexTheme
 
 private val AzulPrimario = Color(0xFF1E3A8A)
@@ -63,10 +68,18 @@ fun PagoFlexHomeScreen(
     onMarcarPagado: (Int) -> Unit,
     onNavegarNuevoPago: () -> Unit,
     onLimpiarMensaje: () -> Unit,
-    onRecomendarOrganizacion: (String) -> Unit = {}
+    onCambiarRol: (RolUsuario) -> Unit,
+    onRecomendarOrganizacion: (String) -> Unit = {},
+    onAbrirDialogoComprobantes: () -> Unit = {},
+    onCerrarDialogoComprobantes: () -> Unit = {},
+    onAprobarComprobante: (Int) -> Unit = {},
+    onRechazarComprobante: (Int) -> Unit = {},
+    onEnviarRecordatoriosCobro: () -> Unit = {},
+    onExportarReporte: () -> Unit = {}
 ) {
     val snackbarHostState = SnackbarHostState()
     var organizacionInput by remember { mutableStateOf("") }
+    var menuRolesExpandido by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.mensajeExito) {
         uiState.mensajeExito?.let { mensaje ->
@@ -75,21 +88,89 @@ fun PagoFlexHomeScreen(
         }
     }
 
+    // Modal de validación con Aprobar y Rechazar (Admin)
+    if (uiState.mostrarDialogoComprobantes) {
+        AlertDialog(
+            onDismissRequest = onCerrarDialogoComprobantes,
+            title = {
+                Text(
+                    text = "Validación de Comprobantes",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column {
+                    if (uiState.comprobantesPendientes.isEmpty()) {
+                        Text("No hay comprobantes pendientes de revisión.", color = Color.Gray)
+                    } else {
+                        uiState.comprobantesPendientes.forEach { comp ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = FondoSuave)
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text(comp.usuario, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("Monto: $${String.format("%,.0f", comp.monto)}", fontSize = 12.sp, color = AzulVibrante)
+                                    Text("Fecha: ${comp.fecha}", fontSize = 10.sp, color = Color.Gray)
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { onRechazarComprobante(comp.id) },
+                                            shape = RoundedCornerShape(8.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                                            modifier = Modifier.height(36.dp)
+                                        ) {
+                                            Text("Rechazar", fontSize = 11.sp)
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Button(
+                                            onClick = { onAprobarComprobante(comp.id) },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.height(36.dp)
+                                        ) {
+                                            Text("Aprobar", fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onCerrarDialogoComprobantes) {
+                    Text("Cerrar", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavegarNuevoPago,
-                containerColor = AzulVibrante,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.size(60.dp)
-            ) {
-                Text(
-                    text = "+",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            if (uiState.rolActivo == RolUsuario.USUARIO) {
+                FloatingActionButton(
+                    onClick = onNavegarNuevoPago,
+                    containerColor = AzulVibrante,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(60.dp)
+                ) {
+                    Text(
+                        text = "+",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -99,7 +180,6 @@ fun PagoFlexHomeScreen(
                 .padding(innerPadding)
                 .background(FondoSuave)
         ) {
-            // Header con Gradiente Azul / Cian
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -118,57 +198,90 @@ fun PagoFlexHomeScreen(
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = uiState.usuarioNombre.take(1).uppercase(),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = uiState.usuarioNombre.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Hola,", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                                Text(
+                                    text = uiState.usuarioNombre,
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Hola,", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-                            Text(
-                                text = uiState.usuarioNombre,
-                                color = Color.White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+
+                        Box {
+                            Surface(
+                                onClick = { menuRolesExpandido = true },
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = "${uiState.rolActivo.titulo} ▾",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = menuRolesExpandido,
+                                onDismissRequest = { menuRolesExpandido = false }
+                            ) {
+                                RolUsuario.values().forEach { rol ->
+                                    DropdownMenuItem(
+                                        text = { Text(rol.titulo) },
+                                        onClick = {
+                                            onCambiarRol(rol)
+                                            menuRolesExpandido = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Indicador de Cumplimiento Oficial (RF-08 / RN-10)
-                    Surface(
-                        color = Color.White.copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    if (uiState.rolActivo == RolUsuario.USUARIO) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Surface(
+                            color = Color.White.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
-                            Text(
-                                text = "★  Cumplimiento: 91.7% (Al día)",
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Cumplimiento: 91.7% (Al dia)",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // Cuerpo principal
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -176,131 +289,314 @@ fun PagoFlexHomeScreen(
             ) {
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Tarjeta Recomendar Organización (RF-12 Oficial de PagoFlex)
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(
-                            text = "🏢 Recomienda tu Jardín, Club o Edificio (RF-12)",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E293B)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
+                when (uiState.rolActivo) {
+                    RolUsuario.USUARIO -> {
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
-                            OutlinedTextField(
-                                value = organizacionInput,
-                                onValueChange = { organizacionInput = it },
-                                placeholder = { Text("Ej: Colegio Bosque Nativo", fontSize = 12.sp) },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(50.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = AzulVibrante,
-                                    unfocusedBorderColor = Color(0xFFCBD5E1)
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text(
+                                    text = "Recomienda tu Jardin, Club o Edificio",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1E293B)
                                 )
-                            )
-                            Button(
-                                onClick = {
-                                    if (organizacionInput.isNotBlank()) {
-                                        onRecomendarOrganizacion(organizacionInput)
-                                        organizacionInput = ""
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = organizacionInput,
+                                        onValueChange = { organizacionInput = it },
+                                        placeholder = { Text("Ej: Colegio Bosque Nativo", fontSize = 12.sp) },
+                                        singleLine = true,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(50.dp),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = AzulVibrante,
+                                            unfocusedBorderColor = Color(0xFFCBD5E1)
+                                        )
+                                    )
+                                    Button(
+                                        onClick = {
+                                            if (organizacionInput.isNotBlank()) {
+                                                onRecomendarOrganizacion(organizacionInput)
+                                                organizacionInput = ""
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = AzulVibrante),
+                                        modifier = Modifier.height(50.dp)
+                                    ) {
+                                        Text("Enviar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = AzulVibrante),
-                                modifier = Modifier.height(50.dp)
-                            ) {
-                                Text("Enviar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Tus compromisos financieros",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 80.dp)
+                        ) {
+                            items(uiState.compromisos, key = { it.id }) { compromiso ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp)
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = compromiso.empresa,
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF1E293B)
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "Monto: $${String.format("%,.0f", compromiso.monto)}",
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = AzulVibrante,
+                                                fontSize = 16.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Vence: ${compromiso.fechaVencimiento}",
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF64748B)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        if (compromiso.estado == EstadoPago.PAGADO) {
+                                            Surface(
+                                                color = Color(0xFFDCFCE7),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text(
+                                                    text = compromiso.estado.etiqueta,
+                                                    color = Color(0xFF15803D),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                )
+                                            }
+                                        } else {
+                                            Button(
+                                                onClick = { onMarcarPagado(compromiso.id) },
+                                                shape = RoundedCornerShape(10.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = AzulVibrante,
+                                                    contentColor = Color.White
+                                                )
+                                            ) {
+                                                Text("Pagar", fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Tus compromisos financieros",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp)
-                ) {
-                    items(uiState.compromisos, key = { it.id }) { compromiso ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    RolUsuario.ADMIN -> {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 24.dp)
                         ) {
-                            Row(
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = compromiso.empresa,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1E293B)
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Monto: $${String.format("%,.0f", compromiso.monto)}",
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = AzulVibrante,
-                                        fontSize = 16.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "📅 Vence: ${compromiso.fechaVencimiento}",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFF64748B)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                if (compromiso.estado == EstadoPago.PAGADO) {
-                                    Surface(
-                                        color = Color(0xFFDCFCE7),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
                                         Text(
-                                            text = "✓ ${compromiso.estado.etiqueta}",
-                                            color = Color(0xFF15803D),
+                                            text = "Panel de Administracion PagoFlex",
+                                            fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                            color = Color(0xFF0F172A)
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "Monitoreo global de operaciones, soporte a usuarios y autorizacion de comprobantes.",
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF64748B)
                                         )
                                     }
-                                } else {
-                                    Button(
-                                        onClick = { onMarcarPagado(compromiso.id) },
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = AzulVibrante,
-                                            contentColor = Color.White
+                                }
+                            }
+
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "Validacion de Comprobantes (RF-05)",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1E293B)
                                         )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Hay ${uiState.comprobantesPendientes.size} pagos por transferencia pendientes de conciliar.",
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF64748B)
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = onAbrirDialogoComprobantes,
+                                            colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario),
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Revisar Comprobantes Pendientes", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    RolUsuario.EJECUTIVO -> {
+                        // VISTA DE EJECUTIVO ENRIQUECIDA Y COMPLETA
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 24.dp)
+                        ) {
+                            // Métricas corporativas generales
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Card(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White)
                                     ) {
-                                        Text("Pagar", fontWeight = FontWeight.Bold)
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Text("Recaudado", fontSize = 11.sp, color = Color.Gray)
+                                            Text("$18.450.000", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = AzulVibrante)
+                                        }
+                                    }
+
+                                    Card(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Text("Al Día", fontSize = 11.sp, color = Color.Gray)
+                                            Text("88.4%", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = Color(0xFF16A34A))
+                                        }
+                                    }
+
+                                    Card(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Text("Vencidos", fontSize = 11.sp, color = Color.Gray)
+                                            Text("12 Clientes", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = Color(0xFFDC2626))
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Módulo 1: Cobranza Automatizada
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "Gestión de Cobranza Directa",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF0F172A)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Notificar automáticamente a los clientes con cuotas en mora.",
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF64748B)
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        OutlinedButton(
+                                            onClick = onEnviarRecordatoriosCobro,
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Enviar Recordatorios de Cobro", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Módulo 2: Exportación de Reportes
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "Reporte General de Cartera",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF0F172A)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Descargar auditoría completa de recaudación y nómina mensual.",
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF64748B)
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = onExportarReporte,
+                                            colors = ButtonDefaults.buttonColors(containerColor = AzulVibrante),
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Exportar Reporte de Recaudación", fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
@@ -309,37 +605,5 @@ fun PagoFlexHomeScreen(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PagoFlexHomeScreenPreview() {
-    Proyecto_Pago_FlexTheme {
-        PagoFlexHomeScreen(
-            uiState = PagoFlexUiState(
-                usuarioNombre = "Carlos",
-                puntajePagador = 850,
-                compromisos = listOf(
-                    CompromisoPago(
-                        id = 1,
-                        empresa = "Enel",
-                        monto = 35000.0,
-                        fechaVencimiento = "15/11/2026",
-                        estado = EstadoPago.PENDIENTE
-                    ),
-                    CompromisoPago(
-                        id = 2,
-                        empresa = "Movistar",
-                        monto = 19990.0,
-                        fechaVencimiento = "20/11/2026",
-                        estado = EstadoPago.PAGADO
-                    )
-                )
-            ),
-            onMarcarPagado = {},
-            onNavegarNuevoPago = {},
-            onLimpiarMensaje = {}
-        )
     }
 }
