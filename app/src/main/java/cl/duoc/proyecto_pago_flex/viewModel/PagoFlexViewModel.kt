@@ -60,6 +60,14 @@ class PagoFlexViewModel: ViewModel() {
         }
     }
 
+    fun registrarRecomendacion(nombreOrganizacion: String) {
+        _uiState.update { current ->
+            current.copy(
+                mensajeExito = "Recomendación de '$nombreOrganizacion' enviada con éxito (RF-12)"
+            )
+        }
+    }
+
     // Limpiar mensaje emergente de confirmación
     fun limpiarMensajeExito(){
         _uiState.update { it.copy(mensajeExito = null) }

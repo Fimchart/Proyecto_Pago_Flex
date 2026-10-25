@@ -1,40 +1,55 @@
 package cl.duoc.proyecto_pago_flex.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import cl.duoc.proyecto_pago_flex.ui.screens.NuevoPagoScreen
 import cl.duoc.proyecto_pago_flex.ui.screens.PagoFlexHomeScreen
 import cl.duoc.proyecto_pago_flex.viewModel.PagoFlexViewModel
 
-sealed class Destinos(val ruta: String){
-    object Home: Destinos("Home")
-    object NuevoPago: Destinos("nuevo_pago")
+sealed class Pantalla(val ruta: String){
+    object Home : Pantalla("home")
+    object NuevoPago : Pantalla("nuevo_pago")
 }
 
 @Composable
 fun AppNavegacion(
-    viewModel: PagoFlexViewModel = viewModel()
+    pagoFlexViewModel: PagoFlexViewModel = viewModel()
 ){
     val navController = rememberNavController()
+    val state by pagoFlexViewModel.uiState.collectAsState()
+
     NavHost(
         navController = navController,
-        startDestination = Destinos.Home.ruta
+        startDestination = Pantalla.Home.ruta
     ){
-        composable(Destinos.Home.ruta){
+
+        // Ruta pantalla principal
+        composable(Pantalla.Home.ruta){
             PagoFlexHomeScreen(
-                viewModel = viewModel,
-                onNuevoPagoClick = {
-                    navController.navigate(Destinos.NuevoPago.ruta)
+                uiState = state,
+                onMarcarPagado = { id -> pagoFlexViewModel.marcadoComoPagado(id) },
+                onNavegarNuevoPago = { navController.navigate(Pantalla.NuevoPago.ruta) },
+                onLimpiarMensaje = { pagoFlexViewModel.limpiarMensajeExito() },
+                onRecomendarOrganizacion = { nombreOrg ->
+                    pagoFlexViewModel.registrarRecomendacion(nombreOrg)
                 }
             )
         }
-    }
-    composable(Destinos.NuevoPago.ruta){
-        NuevoPagoScreen(
-            onVolverClick = {
-                navController.popBackStack()
-            },
-            onGuardarPago = {nombre, monto, fecha -> viewModel.agregarPago(nombre, monto, fecha)
-            }
-        )
+
+        // Ruta pantalla nuevo pago
+        composable(Pantalla.NuevoPago.ruta){
+            NuevoPagoScreen(
+                onRegistrarPago = { empresa, monto, fecha ->
+                    pagoFlexViewModel.registrarCompromiso(empresa, monto, fecha)
+                    navController.popBackStack() // Vuelve atrás al guardar
+                },
+                onVolver = { navController.popBackStack() } // Vuelve atrás al cancelar
+            )
+        }
     }
 }
