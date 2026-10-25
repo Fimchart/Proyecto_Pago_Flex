@@ -28,17 +28,20 @@ fun AppNavegacion(
         startDestination = Pantalla.Home.ruta
     ){
 
-        //Ruta pantalla principal
+        // Ruta pantalla principal
         composable(Pantalla.Home.ruta){
             PagoFlexHomeScreen(
                 uiState = state,
                 onMarcarPagado = { id -> pagoFlexViewModel.marcadoComoPagado(id) },
                 onNavegarNuevoPago = { navController.navigate(Pantalla.NuevoPago.ruta) },
-                onLimpiarMensaje = { pagoFlexViewModel.limpiarMensajeExito() }
+                onLimpiarMensaje = { pagoFlexViewModel.limpiarMensajeExito() },
+                onRecomendarOrganizacion = { nombreOrg ->
+                    pagoFlexViewModel.registrarRecomendacion(nombreOrg)
+                }
             )
         }
 
-        //Ruta pantalla nuevo pago
+        // Ruta pantalla nuevo pago
         composable(Pantalla.NuevoPago.ruta){
             NuevoPagoScreen(
                 onRegistrarPago = { empresa, monto, fecha ->
