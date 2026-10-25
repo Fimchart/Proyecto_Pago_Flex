@@ -1,4 +1,4 @@
-package cl.duoc.proyecto_pago_flex.ui
+package cl.duoc.proyecto_pago_flex.ui.navigation
 
 import androidx.compose.runtime.Composable
 import cl.duoc.proyecto_pago_flex.ui.screens.NuevoPagoScreen

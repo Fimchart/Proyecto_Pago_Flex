@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import cl.duoc.proyecto_pago_flex.ui.theme.Proyecto_Pago_FlexTheme
+import cl.duoc.proyecto_pago_flex.ui.navigation.AppNavegacion
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
