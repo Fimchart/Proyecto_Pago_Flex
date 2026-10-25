@@ -1,9 +1,9 @@
 package cl.duoc.proyecto_pago_flex.ui
 
 import androidx.compose.runtime.Composable
-import cl.duoc.proyecto_pago_flex.ui.screens.viewmodel.NuevoPagoScreen
-import cl.duoc.proyecto_pago_flex.ui.screens.viewmodel.PagoFlexHomeScreen
-import cl.duoc.proyecto_pago_flex.ui.screens.viewmodel.PagoFlexViewModel
+import cl.duoc.proyecto_pago_flex.ui.screens.NuevoPagoScreen
+import cl.duoc.proyecto_pago_flex.ui.screens.PagoFlexHomeScreen
+import cl.duoc.proyecto_pago_flex.viewModel.PagoFlexViewModel
 
 sealed class Destinos(val ruta: String){
     object Home: Destinos("Home")

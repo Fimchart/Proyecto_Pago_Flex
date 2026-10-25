@@ -1,4 +1,4 @@
-package cl.duoc.proyecto_pago_flex.ui.screens.viewmodel
+package cl.duoc.proyecto_pago_flex.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

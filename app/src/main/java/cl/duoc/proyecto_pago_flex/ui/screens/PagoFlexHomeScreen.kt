@@ -1,4 +1,4 @@
-package cl.duoc.proyecto_pago_flex.ui.screens.viewmodel
+package cl.duoc.proyecto_pago_flex.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +27,8 @@ import cl.duoc.proyecto_pago_flex.ui.components.BotonPrincipal
 import cl.duoc.proyecto_pago_flex.ui.components.TarjetaPago
 import cl.duoc.proyecto_pago_flex.ui.theme.Dimens
 import cl.duoc.proyecto_pago_flex.ui.theme.Proyecto_Pago_FlexTheme
+import cl.duoc.proyecto_pago_flex.viewModel.PagoFlexViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PagoFlexHomeScreen(
