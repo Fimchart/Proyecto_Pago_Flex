@@ -15,12 +15,10 @@ class PagoFlexViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(PagoFlexUiState())
     val uiState: StateFlow<PagoFlexUiState> = _uiState.asStateFlow()
 
+    // Registrar un nuevo compromiso financiero
     fun registrarCompromiso(empresa: String, montoTexto: String, fecha: String) {
-        val montoParsed = montoTexto.toDoubleOrNull()
-
-        if (empresa.isBlank() || montoParsed == null || montoParsed <= 0) {
-            return
-        }
+        val montoParsed = montoTexto.toDoubleOrNull() ?: return
+        if (empresa.isBlank() || montoParsed <= 0) return
 
         val nuevoId = (_uiState.value.compromisos.maxOfOrNull { it.id } ?: 0) + 1
 
@@ -40,6 +38,31 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
+    // NUEVA FUNCIÓN: Editar/Actualizar compromiso existente
+    fun actualizarCompromiso(id: Int, nuevaEmpresa: String, nuevoMontoTexto: String, nuevaFecha: String) {
+        val montoParsed = nuevoMontoTexto.toDoubleOrNull() ?: return
+        if (nuevaEmpresa.isBlank() || montoParsed <= 0) return
+
+        _uiState.update { estadoActual ->
+            val listaActualizada = estadoActual.compromisos.map { item ->
+                if (item.id == id) {
+                    item.copy(
+                        empresa = nuevaEmpresa,
+                        monto = montoParsed,
+                        fechaVencimiento = nuevaFecha.ifBlank { "Por definir" }
+                    )
+                } else {
+                    item
+                }
+            }
+            estadoActual.copy(
+                compromisos = listaActualizada,
+                mensajeExito = "Compromiso de $nuevaEmpresa actualizado con éxito"
+            )
+        }
+    }
+
+    // Marcar como pagado
     fun marcadoComoPagado(idCompromiso: Int) {
         _uiState.update { estadoActual ->
             val listaActualizada = estadoActual.compromisos.map { compromiso ->
@@ -56,6 +79,7 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
+    // Registrar recomendación de organización
     fun registrarRecomendacion(nombreOrganizacion: String) {
         _uiState.update { current ->
             current.copy(
@@ -64,7 +88,7 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
-    // Actualización para simular dinámicamente el nombre según el rol
+    // Cambiar de rol (Usuario, Admin, Ejecutivo)
     fun cambiarRol(nuevoRol: RolUsuario) {
         val nombreSimulado = when (nuevoRol) {
             RolUsuario.USUARIO -> "Camila Soto"
@@ -81,7 +105,7 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
-    // Acciones para modal de comprobantes Admin
+    // Control de diálogo de comprobantes (Admin)
     fun abrirDialogoComprobantes() {
         _uiState.update { it.copy(mostrarDialogoComprobantes = true) }
     }
@@ -90,6 +114,7 @@ class PagoFlexViewModel : ViewModel() {
         _uiState.update { it.copy(mostrarDialogoComprobantes = false) }
     }
 
+    // Aprobar comprobante de transferencia
     fun aprobarComprobante(id: Int) {
         _uiState.update { current ->
             val listaFiltrada = current.comprobantesPendientes.filter { it.id != id }
@@ -100,6 +125,7 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
+    // Rechazar comprobante de transferencia
     fun rechazarComprobante(id: Int) {
         _uiState.update { current ->
             val listaFiltrada = current.comprobantesPendientes.filter { it.id != id }
@@ -110,7 +136,7 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
-    // Acciones para panel Ejecutivo
+    // Enviar recordatorios de cobro (Ejecutivo)
     fun enviarRecordatoriosCobro() {
         _uiState.update { current ->
             current.copy(
@@ -119,6 +145,7 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
+    // Exportar reporte de recaudación (Ejecutivo)
     fun exportarReporte() {
         _uiState.update { current ->
             current.copy(
@@ -127,6 +154,7 @@ class PagoFlexViewModel : ViewModel() {
         }
     }
 
+    // Limpiar alertas de éxito
     fun limpiarMensajeExito() {
         _uiState.update { it.copy(mensajeExito = null) }
     }

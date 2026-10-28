@@ -66,6 +66,7 @@ private val FondoSuave = Color(0xFFF1F5F9)
 fun PagoFlexHomeScreen(
     uiState: PagoFlexUiState,
     onMarcarPagado: (Int) -> Unit,
+    onEditarCompromiso: (Int, String, String, String) -> Unit = { _, _, _, _ -> },
     onNavegarNuevoPago: () -> Unit,
     onLimpiarMensaje: () -> Unit,
     onCambiarRol: (RolUsuario) -> Unit,
@@ -81,6 +82,12 @@ fun PagoFlexHomeScreen(
     var organizacionInput by remember { mutableStateOf("") }
     var menuRolesExpandido by remember { mutableStateOf(false) }
 
+    // Estados para el Modal de Edición de Compromiso
+    var compromisoAEditar by remember { mutableStateOf<CompromisoPago?>(null) }
+    var editEmpresa by remember { mutableStateOf("") }
+    var editMonto by remember { mutableStateOf("") }
+    var editFecha by remember { mutableStateOf("") }
+
     LaunchedEffect(uiState.mensajeExito) {
         uiState.mensajeExito?.let { mensaje ->
             snackbarHostState.showSnackbar(mensaje)
@@ -88,7 +95,56 @@ fun PagoFlexHomeScreen(
         }
     }
 
-    // Modal de validación con Aprobar y Rechazar (Admin)
+    // DIÁLOGO/MODAL PARA EDITAR PAGO
+    compromisoAEditar?.let { compromiso ->
+        AlertDialog(
+            onDismissRequest = { compromisoAEditar = null },
+            title = { Text("Editar Compromiso", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = editEmpresa,
+                        onValueChange = { editEmpresa = it },
+                        label = { Text("Empresa") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editMonto,
+                        onValueChange = { editMonto = it },
+                        label = { Text("Monto ($)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editFecha,
+                        onValueChange = { editFecha = it },
+                        label = { Text("Fecha Vencimiento") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onEditarCompromiso(compromiso.id, editEmpresa, editMonto, editFecha)
+                        compromisoAEditar = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AzulVibrante)
+                ) {
+                    Text("Guardar Cambios")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { compromisoAEditar = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Modal de comprobantes Admin
     if (uiState.mostrarDialogoComprobantes) {
         AlertDialog(
             onDismissRequest = onCerrarDialogoComprobantes,
@@ -392,29 +448,45 @@ fun PagoFlexHomeScreen(
 
                                         Spacer(modifier = Modifier.width(8.dp))
 
-                                        if (compromiso.estado == EstadoPago.PAGADO) {
-                                            Surface(
-                                                color = Color(0xFFDCFCE7),
-                                                shape = RoundedCornerShape(10.dp)
-                                            ) {
-                                                Text(
-                                                    text = compromiso.estado.etiqueta,
-                                                    color = Color(0xFF15803D),
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 12.sp,
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                                )
-                                            }
-                                        } else {
-                                            Button(
-                                                onClick = { onMarcarPagado(compromiso.id) },
-                                                shape = RoundedCornerShape(10.dp),
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = AzulVibrante,
-                                                    contentColor = Color.White
-                                                )
-                                            ) {
-                                                Text("Pagar", fontWeight = FontWeight.Bold)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            if (compromiso.estado == EstadoPago.PENDIENTE) {
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        compromisoAEditar = compromiso
+                                                        editEmpresa = compromiso.empresa
+                                                        editMonto = compromiso.monto.toLong().toString()
+                                                        editFecha = compromiso.fechaVencimiento
+                                                    },
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier.height(36.dp)
+                                                ) {
+                                                    Text("Editar", fontSize = 11.sp)
+                                                }
+
+                                                Button(
+                                                    onClick = { onMarcarPagado(compromiso.id) },
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = AzulVibrante,
+                                                        contentColor = Color.White
+                                                    ),
+                                                    modifier = Modifier.height(36.dp)
+                                                ) {
+                                                    Text("Pagar", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                                }
+                                            } else {
+                                                Surface(
+                                                    color = Color(0xFFDCFCE7),
+                                                    shape = RoundedCornerShape(10.dp)
+                                                ) {
+                                                    Text(
+                                                        text = compromiso.estado.etiqueta,
+                                                        color = Color(0xFF15803D),
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp,
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -488,12 +560,10 @@ fun PagoFlexHomeScreen(
                     }
 
                     RolUsuario.EJECUTIVO -> {
-                        // VISTA DE EJECUTIVO ENRIQUECIDA Y COMPLETA
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             contentPadding = PaddingValues(bottom = 24.dp)
                         ) {
-                            // Métricas corporativas generales
                             item {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -534,7 +604,6 @@ fun PagoFlexHomeScreen(
                                 }
                             }
 
-                            // Módulo 1: Cobranza Automatizada
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
@@ -567,7 +636,6 @@ fun PagoFlexHomeScreen(
                                 }
                             }
 
-                            // Módulo 2: Exportación de Reportes
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),

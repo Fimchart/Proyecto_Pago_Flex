@@ -33,6 +33,9 @@ fun AppNavegacion(
             PagoFlexHomeScreen(
                 uiState = state,
                 onMarcarPagado = { id -> pagoFlexViewModel.marcadoComoPagado(id) },
+                onEditarCompromiso = { id, empresa, monto, fecha ->
+                    pagoFlexViewModel.actualizarCompromiso(id, empresa, monto, fecha)
+                },
                 onNavegarNuevoPago = { navController.navigate(Pantalla.NuevoPago.ruta) },
                 onLimpiarMensaje = { pagoFlexViewModel.limpiarMensajeExito() },
                 onCambiarRol = { nuevoRol -> pagoFlexViewModel.cambiarRol(nuevoRol) },
